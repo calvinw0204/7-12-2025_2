@@ -1,58 +1,41 @@
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-  <meta charset="UTF-8">
-  <title>Starlight AR</title> 
+  <meta charset="UTF-8" />
+  <title>Starlight AR</title>
+
+  <!-- A-Frame & MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.css" />
 
   <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; font-family:sans-serif; }
+    body, html { margin:0; padding:0; overflow:hidden; font-family:sans-serif; }
 
-    /* 彈幕容器 */
-    #barrage-container { 
-      position:absolute; top:0; left:0; width:100%; height:60%; 
-      pointer-events:none; z-index:15; overflow:hidden; display:none; 
+    /* 彈幕 */
+    #barrage-container {
+      position:absolute; top:0; left:0; width:100%; height:60%;
+      overflow:hidden; pointer-events:none; display:none;
+      z-index:20;
     }
-
-    /* 彈幕：灰色橢圓背景＋白字 */
-    .barrage { 
-      position:absolute; white-space:nowrap; 
-      font-size:20px; 
-      color:white;
-      background: rgba(0, 0, 0, 0.55);
-      border-radius:999px;
+    .barrage {
+      position:absolute;
+      white-space:nowrap;
+      font-size:20px; color:white;
+      background:rgba(0,0,0,0.55);
       padding:8px 14px;
-
+      border-radius:999px;
       display:flex; align-items:center; gap:12px;
       animation: moveLeft 8s linear forwards;
-
-      cursor:pointer; 
       pointer-events:auto;
+      cursor:pointer;
     }
-
-    .barrage img { 
-      height:80px; 
-      width:auto; 
-      border-radius:6px; 
+    .barrage img {
+      height:80px; border-radius:6px;
     }
-
-    /* Like 心心 SVG */
-    .like-count {
-      display:flex; align-items:center; gap:4px;
-      font-size:20px; /* 與文字同高度 */
-      color:white;
-    }
-    .like-count img {
-      height:1em; /* 與文字同高 */
-      width:auto;
-      filter: invert(53%) sepia(80%) saturate(5360%) hue-rotate(320deg) brightness(96%) contrast(93%); /* 粉紅色 */
-    }
-
-    @keyframes moveLeft { 
-      from { left:100%; } 
-      to { left:-100%; } 
+    @keyframes moveLeft {
+      from { left:100%; }
+      to { left:-100%; }
     }
 
     /* 留言 UI */
@@ -60,363 +43,230 @@
       position:fixed; bottom:10px; left:50%; transform:translateX(-50%);
       background:rgba(255,255,255,0.95);
       padding:8px 12px; border-radius:12px;
-      display:flex; align-items:center; gap:8px; width:90%;
-      max-width:900px; justify-content:space-between;
-      z-index:1000; display:none;
+      display:flex; align-items:center; gap:8px;
+      width:90%; max-width:900px;
+      z-index:999; display:none;
     }
-
-    /* 輸入框樣式 */
     #messageInput {
-      width:250px;
-      height:40px;
+      width:250px; height:40px;
       border-radius:5px;
       border:2px solid #0078ff;
-      background-color:#fff;
       box-shadow: 4px 4px #0078ff;
-      font-size:15px;
-      font-weight:600;
-      color:#000;
       padding:5px 10px;
-      outline:none;
+      font-size:15px; font-weight:600;
     }
-
-    #messageInput::placeholder { color:#666; opacity:0.8; }
-    #messageInput:focus { border:2px solid #ffca1f; }
-
-    /* 相機按鈕 */
-    #cameraButton {
-      width:40px;
-      height:40px;
-      border-radius:50%;
-      border:none;
-      background:#f0f0f0;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      cursor:pointer;
-      padding:0;
-    }
+    #cameraButton { width:40px; height:40px; background:#eee; border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer; }
     #cameraButton img { width:22px; height:22px; }
-
-    /* send button */
     #sendButton {
-      background: #fbca1f;
-      font-family: inherit;
-      padding: 0.6em 1.3em;
-      font-weight: 900;
-      font-size: 18px;
-      border: 3px solid black;
-      border-radius: 0.4em;
-      box-shadow: 0.1em 0.1em;
-      cursor: pointer;
-    }
-    #sendButton:hover {
-      transform: translate(-0.05em, -0.05em);
-      box-shadow: 0.15em 0.15em;
-    }
-    #sendButton:active {
-      transform: translate(0.05em, 0.05em);
-      box-shadow: 0.05em 0.05em;
+      background:#fbca1f;
+      padding:0.6em 1.3em;
+      font-size:18px; font-weight:900;
+      border:3px solid black; border-radius:0.4em;
+      cursor:pointer;
     }
 
     #imageInput { display:none; }
-    #imagePreview { height:90px; width:auto; border-radius:4px; display:none; }
+    #imagePreview { height:90px; display:none; border-radius:6px; }
   </style>
 </head>
 
 <body>
 
 <a-scene mindar-image="imageTargetSrc: travel-target.mind; autoStart: true"
-         vr-mode-ui="enabled: false"
-         device-orientation-permission-ui="enabled: true"
+         vr-mode-ui="enabled:false"
+         device-orientation-permission-ui="enabled:true"
          embedded>
-  <a-camera position="0 0 0" look-controls="enabled:false" cursor="rayOrigin: mouse"></a-camera>
-  <a-assets></a-assets>
-
-  <!-- Marker -->
-  <a-entity mindar-image-target="targetIndex:0" id="checkpoint-0"></a-entity>
+  <a-camera look-controls="enabled:false" cursor="rayOrigin:mouse"></a-camera>
+  <a-entity mindar-image-target="targetIndex:0" id="checkpoint"></a-entity>
 </a-scene>
 
-<!-- 彈幕 -->
 <div id="barrage-container"></div>
 
-<!-- 留言 -->
+<!-- 留言輸入欄 -->
 <div id="messageForm">
-  <input type="text" id="messageInput" placeholder="Share your journey..." />
-  
-  <!-- 相機按鈕 -->
+  <input id="messageInput" placeholder="Write a message..." />
   <label for="imageInput" id="cameraButton">
-    <img src="camera-fill-svgrepo-com.svg" alt="相機">
+    <img src="camera-fill-svgrepo-com.svg">
   </label>
-  <input type="file" id="imageInput" accept="image/*" />
-
-  <img id="imagePreview" />
+  <input id="imageInput" type="file" accept="image/*">
+  <img id="imagePreview">
   <button id="sendButton">Send</button>
 </div>
-
-<!-- Supabase JS (UMD) -->
+<!-- Supabase JS -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
-/* ================== Supabase config ================== */
-/* 你之前提供嘅 Supabase URL & anon key - 測試用（建議完成測試後旋轉 anon key） */
+/* ===========================
+   Supabase Config
+=========================== */
 const SUPABASE_URL = "https://bshseelavtsyhmryvrfm.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzaHNlZWxhdnRzeWhtcnl2cmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMTY4NTAsImV4cCI6MjA4MDY5Mjg1MH0.I0OcupWao3iUAm3b0Jcg_kB9cuPnTJTGZd0VDvIJPPo";
+const SUPABASE_KEY = "YOUR-ANON-KEY-HERE"; // ← 換返你個（不要公開）
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-/* ================== App state / DOM ================== */
-const checkpoint0 = {
-  id: "checkpoint-0",
-  messages: [],       // will be filled from Supabase
-  interval: null
-};
-
-const input = document.getElementById("messageInput");
-const sendBtn = document.getElementById("sendButton");
-const imageInput = document.getElementById("imageInput");
-const preview = document.getElementById("imagePreview");
-const container = document.getElementById("barrage-container");
+/* ===========================
+   DOM Reference
+=========================== */
 const form = document.getElementById("messageForm");
+const msgInput = document.getElementById("messageInput");
+const imgInput = document.getElementById("imageInput");
+const preview = document.getElementById("imagePreview");
+const barrageBox = document.getElementById("barrage-container");
+const sendBtn = document.getElementById("sendButton");
 
-let active = null;
+let messages = [];
+let barrageTimer = null;
 
-/* ---------------- 彈幕顯示 ---------------- */
-function showBarrage(msg){
-  // msg expected shape: { id, message, photo_url, likes, created_at }
+/* ===========================
+   彈幕顯示
+=========================== */
+function showBarrage(m){
   const el = document.createElement("div");
   el.className = "barrage";
-  el.style.top = Math.random() * (container.offsetHeight - 120) + "px";
-  el.dataset.id = msg.id; // store id for likes
+  el.style.top = Math.random()*50 + "%";
+  el.dataset.id = m.id;
 
-  if(msg.photo_url){
+  if(m.photo_url){
     const img = document.createElement("img");
-    img.src = msg.photo_url;
+    img.src = m.photo_url;
     el.appendChild(img);
   }
 
-  if(msg.message){
-    const textNode = document.createTextNode(msg.message);
-    el.appendChild(textNode);
+  if(m.message){
+    el.append(document.createTextNode(m.message));
   }
 
-  // 心心 SVG + like count
-  const likeSpan = document.createElement("span");
-  likeSpan.className = "like-count";
-  const heartIcon = document.createElement("img");
-  heartIcon.src = "heart-straight-fill-svgrepo-com.svg";
-  likeSpan.appendChild(heartIcon);
+  // like
+  const like = document.createElement("span");
+  like.style.marginLeft = "10px";
+  like.innerHTML = `❤️ ${m.likes ?? 0}`;
+  el.appendChild(like);
 
-  const likeNumber = document.createElement("span");
-  likeNumber.textContent = (msg.likes || 0);
-  likeSpan.appendChild(likeNumber);
-
-  el.appendChild(likeSpan);
-
-  // Double Click = +1 like (update Supabase)
+  // dblclick like
   el.addEventListener("dblclick", async ()=>{
-    const id = el.dataset.id;
-    // optimistic UI
-    let newLikes = (parseInt(likeNumber.textContent||"0",10) + 1);
-    likeNumber.textContent = newLikes;
+    let newLikes = (m.likes ?? 0) + 1;
+    like.innerHTML = `❤️ ${newLikes}`;
+    m.likes = newLikes;
 
-    // update DB
-    const { error } = await supabase
-      .from("comments")
-      .update({ likes: newLikes })
-      .eq("id", id);
-
-    if(error){
-      console.error("Like update error:", error);
-      // revert on error: reload likes from DB
-      const { data } = await supabase.from("comments").select("likes").eq("id", id).maybeSingle();
-      likeNumber.textContent = data ? data.likes : 0;
-    }
+    await supabaseClient.from("comments").update({ likes:newLikes }).eq("id", m.id);
   });
 
-  container.appendChild(el);
+  barrageBox.appendChild(el);
   setTimeout(()=>el.remove(), 9000);
 }
 
-/* ---------------- Start / Stop Barrage ---------------- */
+/* ===========================
+   Interval 播放
+=========================== */
 function startBarrage(){
-  if(checkpoint0.interval) return;
-  container.style.display = "block";
+  if(barrageTimer) return;
+  barrageBox.style.display = "block";
+
   let i = 0;
-  checkpoint0.interval = setInterval(()=>{
-    if(checkpoint0.messages.length > 0){
-      const msg = checkpoint0.messages[i];
-      showBarrage(msg);
-      i = (i + 1) % checkpoint0.messages.length;
+  barrageTimer = setInterval(()=>{
+    if(messages.length > 0){
+      showBarrage(messages[i]);
+      i = (i+1) % messages.length;
     }
   }, 2500);
 }
-
 function stopBarrage(){
-  if(checkpoint0.interval){
-    clearInterval(checkpoint0.interval);
-    checkpoint0.interval = null;
-  }
-  container.style.display = "none";
-  container.innerHTML = "";
+  clearInterval(barrageTimer);
+  barrageTimer = null;
+  barrageBox.innerHTML = "";
+  barrageBox.style.display = "none";
 }
 
-/* ---------------- Marker Event ---------------- */
-const marker0 = document.getElementById("checkpoint-0");
-marker0.addEventListener("targetFound", async ()=>{
-  active = checkpoint0;
-  form.style.display = "flex";
-  await loadMessages();   // load latest from Supabase
-  startBarrage();
-});
-marker0.addEventListener("targetLost", ()=>{
-  active = null;
-  form.style.display = "none";
-  stopBarrage();
-});
+/* ===========================
+   Load Comments
+=========================== */
+async function loadMessages(){
+  const { data } = await supabaseClient
+    .from("comments")
+    .select("*")
+    .order("created_at");
+  messages = data || [];
+}
 
-/* ---------------- Image Preview ---------------- */
-imageInput.addEventListener("change", ()=>{
-  const file = imageInput.files[0];
-  if(!file){ 
-    preview.style.display="none"; 
-    preview.src=""; 
-    preview.removeAttribute("src");
-    return; 
+/* ===========================
+   Realtime Subscription
+=========================== */
+supabaseClient
+  .channel("comments-realtime")
+  .on("postgres_changes", { event:"*", schema:"public", table:"comments" }, payload=>{
+      loadMessages();
+  })
+  .subscribe();
+
+/* ===========================
+   Photo Preview
+=========================== */
+imgInput.addEventListener("change", ()=>{
+  const f = imgInput.files[0];
+  if(!f){
+    preview.style.display="none";
+    return;
   }
   const reader = new FileReader();
   reader.onload = e=>{
     preview.src = e.target.result;
     preview.style.display = "inline";
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(f);
 });
 
-/* ---------------- Load messages from Supabase ---------------- */
-async function loadMessages(){
-  try {
-    const { data, error } = await supabase
-      .from("comments")
-      .select("*")
-      .order("created_at", { ascending: true });
-
-    if(error){
-      console.error("Load messages error:", error);
-      return;
-    }
-    // store locally for iteration
-    checkpoint0.messages = data || [];
-  } catch (err) {
-    console.error("loadMessages exception:", err);
-  }
-}
-
-/* ---------------- Upload image to Supabase Storage ---------------- */
-async function uploadImageFile(file){
+/* ===========================
+   Upload Image to Supabase
+=========================== */
+async function uploadImage(){
+  const file = imgInput.files[0];
   if(!file) return null;
-  // create unique path
-  const ext = file.name.split('.').pop();
-  const path = `uploads/${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
 
-  const { data, error: uploadError } = await supabase
-    .storage
-    .from('photos')
-    .upload(path, file, { cacheControl: '3600', upsert: false });
+  const fileName = `${Date.now()}-${file.name}`;
+  const { data, error } = await supabaseClient.storage
+      .from("photos")
+      .upload(fileName, file);
 
-  if(uploadError){
-    console.error("Storage upload error:", uploadError);
-    return null;
-  }
+  if(error) { console.error(error); return null; }
 
-  // get public URL
-  const { data: urlData } = supabase
-    .storage
-    .from('photos')
-    .getPublicUrl(path);
+  const { data:publicURL } = supabaseClient.storage
+      .from("photos")
+      .getPublicUrl(fileName);
 
-  // urlData.publicUrl
-  return urlData && urlData.publicUrl ? urlData.publicUrl : null;
+  return publicURL.publicUrl;
 }
 
-/* ---------------- Send Message (insert into comments) ---------------- */
+/* ===========================
+   Send Message
+=========================== */
 sendBtn.addEventListener("click", async ()=>{
-  if(!active) return;
-  const text = input.value.trim();
-  const file = imageInput.files[0];
-  if(!text && !file) return;
+  const msg = msgInput.value.trim();
+  if(!msg && !imgInput.files.length) return;
 
-  sendBtn.disabled = true;
-  sendBtn.textContent = "Sending...";
+  let photoURL = await uploadImage();
 
-  try {
-    let photoUrl = null;
-    if(file){
-      photoUrl = await uploadImageFile(file);
-    }
-
-    const insertPayload = {
-      message: text || null,
-      photo_url: photoUrl,
-      likes: 0
-    };
-
-    const { data, error } = await supabase
-      .from("comments")
-      .insert([ insertPayload ])
-      .select()
-      .single();
-
-    if(error){
-      console.error("Insert error:", error);
-      alert("新增留言失敗，請再試一次");
-    } else {
-      // the realtime subscription will push the new item to UI,
-      // but we can also add it locally immediately if desired:
-      // checkpoint0.messages.push(data);
-      input.value = "";
-      imageInput.value = "";
-      preview.src = "";
-      preview.removeAttribute("src");
-      preview.style.display = "none";
-    }
-  } finally {
-    sendBtn.disabled = false;
-    sendBtn.textContent = "Send";
-  }
-});
-
-input.addEventListener("keydown", e=>{ if(e.key==="Enter") sendBtn.click(); });
-
-/* ---------------- Realtime subscription (INSERT and UPDATE) ---------------- */
-const commentsChannel = supabase
-  .channel('public:comments')
-  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, (payload) => {
-    const newRow = payload.new;
-    // push to local messages and it will show on next cycles
-    checkpoint0.messages.push(newRow);
-  })
-  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'comments' }, (payload) => {
-    const updated = payload.new;
-    // update local copy (match by id)
-    const idx = checkpoint0.messages.findIndex(m => m.id === updated.id);
-    if(idx !== -1){
-      checkpoint0.messages[idx] = updated;
-    } else {
-      // if not found, push
-      checkpoint0.messages.push(updated);
-    }
-  })
-  .subscribe((status) => {
-    if(status === 'SUBSCRIBED') {
-      console.log('Realtime subscribed to comments');
-    }
+  await supabaseClient.from("comments").insert({
+    message: msg,
+    photo_url: photoURL
   });
 
-/* Optional: cleanup on unload */
-window.addEventListener('beforeunload', () => {
-  try { supabase.removeChannel(commentsChannel); } catch(e){/*ignore*/ }
+  msgInput.value = "";
+  imgInput.value = "";
+  preview.style.display = "none";
 });
 
+/* ===========================
+   Marker Events
+=========================== */
+document.getElementById("checkpoint").addEventListener("targetFound", async ()=>{
+  form.style.display = "flex";
+  await loadMessages();
+  startBarrage();
+});
+
+document.getElementById("checkpoint").addEventListener("targetLost", ()=>{
+  form.style.display = "none";
+  stopBarrage();
+});
 </script>
 
 </body>
