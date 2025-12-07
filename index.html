@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goddess Intro</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* 彈幕放後面 */
+    #danmuContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 5; /* 彈幕在 Lottie 後面 */
+    }
+
+    .danmu {
+      position: absolute;
+      white-space: nowrap;
+      color: rgba(255,255,255,0.8);
+      font-size: 18px;
+      text-shadow: 0 0 8px rgba(255,255,255,0.6);
+      animation: fly linear forwards;
+    }
+
+    @keyframes fly {
+      from { transform: translateX(100vw); }
+      to { transform: translateX(-100vw); }
+    }
+
+    /* Lottie 動畫填滿畫面 */
+    #lottieContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 10; /* Lottie 在最前 */
+      cursor: pointer;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <!-- 彈幕容器（後面） -->
+  <div id="danmuContainer"></div>
+
+  <!-- Lottie 動畫容器（最前） -->
+  <div id="lottieContainer"></div>
+
+  <!-- Lottie.js CDN -->
+  <script src="https://unpkg.com/lottie-web@5.12.0/build/player/lottie.min.js"></script>
+
+  <script>
+    // ===== 彈幕產生 =====
+    const container = document.getElementById("danmuContainer");
+    const words = [
+      "星光閃耀✨",
+      "Welcome to StarLightAR",
+      "香港電影之光🎬",
+      "Collect your rewards!",
+      "Enjoy the night🌙"
+    ];
+
+    setInterval(() => {
+      const d = document.createElement("div");
+      d.className = "danmu";
+      d.innerText = words[Math.floor(Math.random() * words.length)];
+      d.style.top = Math.random() * (window.innerHeight - 30) + "px";
+      d.style.animationDuration = (6 + Math.random() * 5) + "s";
+      container.appendChild(d);
+
+      // 彈幕淡出後移除
+      setTimeout(() => {
+        d.style.opacity = "0";
+        setTimeout(() => d.remove(), 1000);
+      }, 9000);
+    }, 1000);
+
+    // ===== Lottie 初始化 =====
+    const anim = lottie.loadAnimation({
+      container: document.getElementById('lottieContainer'),
+      renderer: 'svg',
+      loop: false,
+      autoplay: false,
+      path: 'CompJson.json', // Lottie JSON 檔
+      rendererSettings: {
+        preserveAspectRatio: 'xMidYMid slice' // 填滿整個畫面
+      }
+    });
+
+    const lottieContainer = document.getElementById('lottieContainer');
+
+    // 點擊播放動畫
+    lottieContainer.addEventListener('click', () => {
+      lottieContainer.style.cursor = 'default';
+      anim.play();
+    }, { once: true });
+
+    // 播放完自動跳頁
+    anim.addEventListener('complete', () => {
+  window.location.href = "https://calvinw0204.github.io/15-11-2025_oneonly/AR.html";
+});
+  </script>
+</body>
+</html>
+
