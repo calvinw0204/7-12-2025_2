@@ -154,10 +154,21 @@
   <button id="sendButton">Send</button>
 </div>
 
+<!-- Supabase JS (UMD) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
 <script>
+/* ================== Supabase config ================== */
+/* 你之前提供嘅 Supabase URL & anon key - 測試用（建議完成測試後旋轉 anon key） */
+const SUPABASE_URL = "https://bshseelavtsyhmryvrfm.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzaHNlZWxhdnRzeWhtcnl2cmZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxMTY4NTAsImV4cCI6MjA4MDY5Mjg1MH0.I0OcupWao3iUAm3b0Jcg_kB9cuPnTJTGZd0VDvIJPPo";
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ================== App state / DOM ================== */
 const checkpoint0 = {
   id: "checkpoint-0",
-  messages: JSON.parse(localStorage.getItem("barrage_checkpoint-0") || "[]"),
+  messages: [],       // will be filled from Supabase
   interval: null
 };
 
@@ -171,23 +182,25 @@ const form = document.getElementById("messageForm");
 let active = null;
 
 /* ---------------- 彈幕顯示 ---------------- */
-function showBarrage(msg, index){
+function showBarrage(msg){
+  // msg expected shape: { id, message, photo_url, likes, created_at }
   const el = document.createElement("div");
   el.className = "barrage";
   el.style.top = Math.random() * (container.offsetHeight - 120) + "px";
+  el.dataset.id = msg.id; // store id for likes
 
-  if(msg.img){
+  if(msg.photo_url){
     const img = document.createElement("img");
-    img.src = msg.img;
+    img.src = msg.photo_url;
     el.appendChild(img);
   }
 
-  if(msg.text){
-    const textNode = document.createTextNode(msg.text);
+  if(msg.message){
+    const textNode = document.createTextNode(msg.message);
     el.appendChild(textNode);
   }
 
-  // 心心 SVG
+  // 心心 SVG + like count
   const likeSpan = document.createElement("span");
   likeSpan.className = "like-count";
   const heartIcon = document.createElement("img");
@@ -195,30 +208,45 @@ function showBarrage(msg, index){
   likeSpan.appendChild(heartIcon);
 
   const likeNumber = document.createElement("span");
-  likeNumber.textContent = msg.likes || 0;
+  likeNumber.textContent = (msg.likes || 0);
   likeSpan.appendChild(likeNumber);
 
   el.appendChild(likeSpan);
 
-  // Double Click = +1 like
-  el.addEventListener("dblclick", ()=>{
-    checkpoint0.messages[index].likes = (checkpoint0.messages[index].likes || 0) + 1;
-    likeNumber.textContent = checkpoint0.messages[index].likes;
-    localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
+  // Double Click = +1 like (update Supabase)
+  el.addEventListener("dblclick", async ()=>{
+    const id = el.dataset.id;
+    // optimistic UI
+    let newLikes = (parseInt(likeNumber.textContent||"0",10) + 1);
+    likeNumber.textContent = newLikes;
+
+    // update DB
+    const { error } = await supabase
+      .from("comments")
+      .update({ likes: newLikes })
+      .eq("id", id);
+
+    if(error){
+      console.error("Like update error:", error);
+      // revert on error: reload likes from DB
+      const { data } = await supabase.from("comments").select("likes").eq("id", id).maybeSingle();
+      likeNumber.textContent = data ? data.likes : 0;
+    }
   });
 
   container.appendChild(el);
   setTimeout(()=>el.remove(), 9000);
 }
 
-/* ---------------- Start Barrage ---------------- */
+/* ---------------- Start / Stop Barrage ---------------- */
 function startBarrage(){
   if(checkpoint0.interval) return;
   container.style.display = "block";
   let i = 0;
   checkpoint0.interval = setInterval(()=>{
     if(checkpoint0.messages.length > 0){
-      showBarrage(checkpoint0.messages[i], i);
+      const msg = checkpoint0.messages[i];
+      showBarrage(msg);
       i = (i + 1) % checkpoint0.messages.length;
     }
   }, 2500);
@@ -235,9 +263,10 @@ function stopBarrage(){
 
 /* ---------------- Marker Event ---------------- */
 const marker0 = document.getElementById("checkpoint-0");
-marker0.addEventListener("targetFound", ()=>{
+marker0.addEventListener("targetFound", async ()=>{
   active = checkpoint0;
   form.style.display = "flex";
+  await loadMessages();   // load latest from Supabase
   startBarrage();
 });
 marker0.addEventListener("targetLost", ()=>{
@@ -263,35 +292,131 @@ imageInput.addEventListener("change", ()=>{
   reader.readAsDataURL(file);
 });
 
-/* ---------------- Send Message ---------------- */
-sendBtn.addEventListener("click", ()=>{
+/* ---------------- Load messages from Supabase ---------------- */
+async function loadMessages(){
+  try {
+    const { data, error } = await supabase
+      .from("comments")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if(error){
+      console.error("Load messages error:", error);
+      return;
+    }
+    // store locally for iteration
+    checkpoint0.messages = data || [];
+  } catch (err) {
+    console.error("loadMessages exception:", err);
+  }
+}
+
+/* ---------------- Upload image to Supabase Storage ---------------- */
+async function uploadImageFile(file){
+  if(!file) return null;
+  // create unique path
+  const ext = file.name.split('.').pop();
+  const path = `uploads/${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+
+  const { data, error: uploadError } = await supabase
+    .storage
+    .from('photos')
+    .upload(path, file, { cacheControl: '3600', upsert: false });
+
+  if(uploadError){
+    console.error("Storage upload error:", uploadError);
+    return null;
+  }
+
+  // get public URL
+  const { data: urlData } = supabase
+    .storage
+    .from('photos')
+    .getPublicUrl(path);
+
+  // urlData.publicUrl
+  return urlData && urlData.publicUrl ? urlData.publicUrl : null;
+}
+
+/* ---------------- Send Message (insert into comments) ---------------- */
+sendBtn.addEventListener("click", async ()=>{
   if(!active) return;
   const text = input.value.trim();
   const file = imageInput.files[0];
   if(!text && !file) return;
 
-  const saveMsg = (imgData = null)=>{
-    const msg = { text, img: imgData, likes: 0 };
-    checkpoint0.messages.push(msg);
-    if(checkpoint0.messages.length > 80) checkpoint0.messages.shift();
-    localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
-    showBarrage(msg, checkpoint0.messages.length - 1);
+  sendBtn.disabled = true;
+  sendBtn.textContent = "Sending...";
 
-    input.value = "";
-    imageInput.value = "";
-    preview.src = "";
-    preview.removeAttribute("src");
-    preview.style.display = "none";
-  };
+  try {
+    let photoUrl = null;
+    if(file){
+      photoUrl = await uploadImageFile(file);
+    }
 
-  if(file){
-    const reader = new FileReader();
-    reader.onload = e=> saveMsg(e.target.result);
-    reader.readAsDataURL(file);
-  } else saveMsg();
+    const insertPayload = {
+      message: text || null,
+      photo_url: photoUrl,
+      likes: 0
+    };
+
+    const { data, error } = await supabase
+      .from("comments")
+      .insert([ insertPayload ])
+      .select()
+      .single();
+
+    if(error){
+      console.error("Insert error:", error);
+      alert("新增留言失敗，請再試一次");
+    } else {
+      // the realtime subscription will push the new item to UI,
+      // but we can also add it locally immediately if desired:
+      // checkpoint0.messages.push(data);
+      input.value = "";
+      imageInput.value = "";
+      preview.src = "";
+      preview.removeAttribute("src");
+      preview.style.display = "none";
+    }
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = "Send";
+  }
 });
 
 input.addEventListener("keydown", e=>{ if(e.key==="Enter") sendBtn.click(); });
+
+/* ---------------- Realtime subscription (INSERT and UPDATE) ---------------- */
+const commentsChannel = supabase
+  .channel('public:comments')
+  .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, (payload) => {
+    const newRow = payload.new;
+    // push to local messages and it will show on next cycles
+    checkpoint0.messages.push(newRow);
+  })
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'comments' }, (payload) => {
+    const updated = payload.new;
+    // update local copy (match by id)
+    const idx = checkpoint0.messages.findIndex(m => m.id === updated.id);
+    if(idx !== -1){
+      checkpoint0.messages[idx] = updated;
+    } else {
+      // if not found, push
+      checkpoint0.messages.push(updated);
+    }
+  })
+  .subscribe((status) => {
+    if(status === 'SUBSCRIBED') {
+      console.log('Realtime subscribed to comments');
+    }
+  });
+
+/* Optional: cleanup on unload */
+window.addEventListener('beforeunload', () => {
+  try { supabase.removeChannel(commentsChannel); } catch(e){/*ignore*/ }
+});
+
 </script>
 
 </body>
