@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -17,7 +16,6 @@
       pointer-events:none; z-index:15; overflow:hidden; display:none; 
     }
 
-    /* 彈幕：灰色橢圓背景＋白字 */
     .barrage { 
       position:absolute; white-space:nowrap; 
       font-size:20px; 
@@ -39,16 +37,16 @@
       border-radius:6px; 
     }
 
-    /* Like 心心 SVG */
+    /* like 心心 */
     .like-count {
       display:flex; align-items:center; gap:4px;
-      font-size:20px; /* 與文字同高度 */
+      font-size:20px;
       color:white;
     }
     .like-count img {
-      height:1em; /* 與文字同高 */
+      height:1em;
       width:auto;
-      filter: invert(53%) sepia(80%) saturate(5360%) hue-rotate(320deg) brightness(96%) contrast(93%); /* 粉紅色 */
+      filter: invert(53%) sepia(80%) saturate(5360%) hue-rotate(320deg) brightness(96%) contrast(93%);
     }
 
     @keyframes moveLeft { 
@@ -66,7 +64,7 @@
       z-index:1000; display:none;
     }
 
-    /* 輸入框樣式 */
+    /* 輸入框 */
     #messageInput {
       width:250px;
       height:40px;
@@ -99,7 +97,6 @@
     }
     #cameraButton img { width:22px; height:22px; }
 
-    /* send button */
     #sendButton {
       background: #fbca1f;
       font-family: inherit;
@@ -121,7 +118,6 @@
     }
 
     #imageInput { display:none; }
-    #imagePreview { height:90px; width:auto; border-radius:4px; display:none; }
   </style>
 </head>
 
@@ -133,45 +129,43 @@
          embedded>
   <a-camera position="0 0 0" look-controls="enabled:false" cursor="rayOrigin: mouse"></a-camera>
   <a-assets></a-assets>
-
-  <!-- Marker -->
   <a-entity mindar-image-target="targetIndex:0" id="checkpoint-0"></a-entity>
 </a-scene>
 
 <!-- 彈幕 -->
 <div id="barrage-container"></div>
 
-<!-- 留言 -->
+<!-- 留言欄 -->
 <div id="messageForm">
   <input type="text" id="messageInput" placeholder="Share your journey..." />
   
-  <!-- 相機按鈕 -->
+  <!-- 相機 -->
   <label for="imageInput" id="cameraButton">
     <img src="camera-fill-svgrepo-com.svg" alt="相機">
   </label>
   <input type="file" id="imageInput" accept="image/*" />
 
-  <img id="imagePreview" />
   <button id="sendButton">Send</button>
 </div>
 
 <script>
+/* ------------ Data ------------- */
 const checkpoint0 = {
   id: "checkpoint-0",
   messages: JSON.parse(localStorage.getItem("barrage_checkpoint-0") || "[]"),
   interval: null
 };
 
+/* ------------ DOM ------------- */
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendButton");
 const imageInput = document.getElementById("imageInput");
-const preview = document.getElementById("imagePreview");
 const container = document.getElementById("barrage-container");
 const form = document.getElementById("messageForm");
 
 let active = null;
 
-/* ---------------- 彈幕顯示 ---------------- */
+/* ------------ Barrage ------------- */
 function showBarrage(msg, index){
   const el = document.createElement("div");
   el.className = "barrage";
@@ -188,23 +182,21 @@ function showBarrage(msg, index){
     el.appendChild(textNode);
   }
 
-  // 心心 SVG
   const likeSpan = document.createElement("span");
   likeSpan.className = "like-count";
-  const heartIcon = document.createElement("img");
-  heartIcon.src = "heart-straight-fill-svgrepo-com.svg";
-  likeSpan.appendChild(heartIcon);
+  const heart = document.createElement("img");
+  heart.src = "heart-straight-fill-svgrepo-com.svg";
+  likeSpan.appendChild(heart);
 
-  const likeNumber = document.createElement("span");
-  likeNumber.textContent = msg.likes || 0;
-  likeSpan.appendChild(likeNumber);
+  const num = document.createElement("span");
+  num.textContent = msg.likes || 0;
+  likeSpan.appendChild(num);
 
   el.appendChild(likeSpan);
 
-  // Double Click = +1 like
   el.addEventListener("dblclick", ()=>{
     checkpoint0.messages[index].likes = (checkpoint0.messages[index].likes || 0) + 1;
-    likeNumber.textContent = checkpoint0.messages[index].likes;
+    num.textContent = checkpoint0.messages[index].likes;
     localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
   });
 
@@ -212,7 +204,6 @@ function showBarrage(msg, index){
   setTimeout(()=>el.remove(), 9000);
 }
 
-/* ---------------- Start Barrage ---------------- */
 function startBarrage(){
   if(checkpoint0.interval) return;
   container.style.display = "block";
@@ -234,65 +225,55 @@ function stopBarrage(){
   container.innerHTML = "";
 }
 
-/* ---------------- Marker Event ---------------- */
-const marker0 = document.getElementById("checkpoint-0");
-marker0.addEventListener("targetFound", ()=>{
+/* ------------ Marker events ------------- */
+document.getElementById("checkpoint-0").addEventListener("targetFound", ()=>{
   active = checkpoint0;
   form.style.display = "flex";
   startBarrage();
 });
-marker0.addEventListener("targetLost", ()=>{
+document.getElementById("checkpoint-0").addEventListener("targetLost", ()=>{
   active = null;
   form.style.display = "none";
   stopBarrage();
 });
 
-/* ---------------- Image Preview ---------------- */
-imageInput.addEventListener("change", ()=>{
-  const file = imageInput.files[0];
-  if(!file){ 
-    preview.style.display="none"; 
-    preview.src=""; 
-    preview.removeAttribute("src");
-    return; 
-  }
-  const reader = new FileReader();
-  reader.onload = e=>{
-    preview.src = e.target.result;
-    preview.style.display = "inline";
-  };
-  reader.readAsDataURL(file);
-});
-
-/* ---------------- Send Message ---------------- */
-sendBtn.addEventListener("click", ()=>{
+/* ------------ Send message ------------- */
+sendBtn.addEventListener("click", ()=> {
   if(!active) return;
+
   const text = input.value.trim();
-  const file = imageInput.files[0];
+  let file = imageInput.files[0];
+
   if(!text && !file) return;
 
   const saveMsg = (imgData = null)=>{
     const msg = { text, img: imgData, likes: 0 };
     checkpoint0.messages.push(msg);
-    if(checkpoint0.messages.length > 80) checkpoint0.messages.shift();
+
+    if(checkpoint0.messages.length > 80)
+      checkpoint0.messages.shift();
+
     localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
+
     showBarrage(msg, checkpoint0.messages.length - 1);
 
     input.value = "";
-    imageInput.value = "";
-    preview.src = "";
-    preview.removeAttribute("src");
-    preview.style.display = "none";
+    imageInput.value = "";  // ★ 清空 file input
+    file = null;            // ★ 避免二次送出
   };
 
   if(file){
     const reader = new FileReader();
-    reader.onload = e=> saveMsg(e.target.result);
+    reader.onload = e => saveMsg(e.target.result);
     reader.readAsDataURL(file);
-  } else saveMsg();
+  } else {
+    saveMsg();
+  }
 });
 
-input.addEventListener("keydown", e=>{ if(e.key==="Enter") sendBtn.click(); });
+input.addEventListener("keydown", e=>{
+  if(e.key==="Enter") sendBtn.click();
+});
 </script>
 
 </body>
