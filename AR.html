@@ -10,13 +10,11 @@
   <style>
     body, html { margin:0; padding:0; height:100%; overflow:hidden; font-family:sans-serif; }
 
-    /* 彈幕容器 */
     #barrage-container { 
       position:absolute; top:0; left:0; width:100%; height:60%; 
       pointer-events:none; z-index:15; overflow:hidden; display:none; 
     }
 
-    /* 彈幕 */
     .barrage { 
       position:absolute; white-space:nowrap; 
       font-size:20px; 
@@ -36,7 +34,6 @@
       border-radius:6px; 
     }
 
-    /* 心心 */
     .like-count {
       display:flex; align-items:center; gap:4px;
       font-size:20px;
@@ -53,7 +50,6 @@
       to { left:-100%; } 
     }
 
-    /* 留言 UI */
     #messageForm {
       position:fixed; bottom:10px; left:50%; transform:translateX(-50%);
       background:rgba(255,255,255,0.95);
@@ -63,7 +59,6 @@
       z-index:1000; display:none;
     }
 
-    /* 輸入框 */
     #messageInput {
       width:250px;
       height:40px;
@@ -78,10 +73,6 @@
       outline:none;
     }
 
-    #messageInput::placeholder { color:#666; opacity:0.8; }
-    #messageInput:focus { border:2px solid #ffca1f; }
-
-    /* 相機按鈕 */
     #cameraButton {
       width:40px;
       height:40px;
@@ -96,7 +87,6 @@
     }
     #cameraButton img { width:22px; height:22px; }
 
-    /* Send button */
     #sendButton {
       background: #fbca1f;
       padding: 0.6em 1.3em;
@@ -107,17 +97,8 @@
       box-shadow: 0.1em 0.1em;
       cursor: pointer;
     }
-    #sendButton:hover {
-      transform: translate(-0.05em, -0.05em);
-      box-shadow: 0.15em 0.15em;
-    }
-    #sendButton:active {
-      transform: translate(0.05em, 0.05em);
-      box-shadow: 0.05em 0.05em;
-    }
 
     #imageInput { display:none; }
-
   </style>
 </head>
 
@@ -133,11 +114,9 @@
   <a-entity mindar-image-target="targetIndex:0" id="checkpoint-0"></a-entity>
 </a-scene>
 
-<!-- 彈幕 -->
 <div id="barrage-container"></div>
 
-<!-- 留言欄 -->
-<div id="messageForm">
+<form id="messageForm">
   <input type="text" id="messageInput" placeholder="Share your journey..." />
 
   <label for="imageInput" id="cameraButton">
@@ -145,11 +124,10 @@
   </label>
   <input type="file" id="imageInput" accept="image/*">
 
-  <button id="sendButton">Send</button>
-</div>
+  <button type="button" id="sendButton">Send</button>
+</form>
 
 <script>
-/* ---------- Data ---------- */
 const checkpoint0 = {
   id: "checkpoint-0",
   messages: JSON.parse(localStorage.getItem("barrage_checkpoint-0") || "[]"),
@@ -164,7 +142,6 @@ const form = document.getElementById("messageForm");
 
 let active = null;
 
-/* ---------- 彈幕 ---------- */
 function showBarrage(msg, index){
   const el = document.createElement("div");
   el.className = "barrage";
@@ -259,10 +236,10 @@ sendBtn.addEventListener("click", ()=> {
     localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
     showBarrage(msg, checkpoint0.messages.length - 1);
 
-    // 清空文字
-    input.value = "";
+    /* 清空 form（你要求保留 form.reset()） */
+    form.reset();
 
-    /* ⭐⭐⭐ 重點：重新建立 file input（100% 清空上一張圖片） */
+    /* 重新建立 file input → 真正清空檔案內容 */
     const newInput = imageInput.cloneNode();
     imageInput.replaceWith(newInput);
     imageInput = newInput;
