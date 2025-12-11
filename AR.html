@@ -2,7 +2,7 @@
 <html lang="zh-HK">
 <head>
   <meta charset="UTF-8">
-  <title>Starlight AR</title> 
+  <title>Starlight AR</title>
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.css" />
@@ -16,6 +16,7 @@
       pointer-events:none; z-index:15; overflow:hidden; display:none; 
     }
 
+    /* 彈幕 */
     .barrage { 
       position:absolute; white-space:nowrap; 
       font-size:20px; 
@@ -23,10 +24,8 @@
       background: rgba(0, 0, 0, 0.55);
       border-radius:999px;
       padding:8px 14px;
-
       display:flex; align-items:center; gap:12px;
       animation: moveLeft 8s linear forwards;
-
       cursor:pointer; 
       pointer-events:auto;
     }
@@ -37,7 +36,7 @@
       border-radius:6px; 
     }
 
-    /* like 心心 */
+    /* 心心 */
     .like-count {
       display:flex; align-items:center; gap:4px;
       font-size:20px;
@@ -97,9 +96,9 @@
     }
     #cameraButton img { width:22px; height:22px; }
 
+    /* Send button */
     #sendButton {
       background: #fbca1f;
-      font-family: inherit;
       padding: 0.6em 1.3em;
       font-weight: 900;
       font-size: 18px;
@@ -118,6 +117,7 @@
     }
 
     #imageInput { display:none; }
+
   </style>
 </head>
 
@@ -129,6 +129,7 @@
          embedded>
   <a-camera position="0 0 0" look-controls="enabled:false" cursor="rayOrigin: mouse"></a-camera>
   <a-assets></a-assets>
+
   <a-entity mindar-image-target="targetIndex:0" id="checkpoint-0"></a-entity>
 </a-scene>
 
@@ -138,34 +139,32 @@
 <!-- 留言欄 -->
 <div id="messageForm">
   <input type="text" id="messageInput" placeholder="Share your journey..." />
-  
-  <!-- 相機 -->
+
   <label for="imageInput" id="cameraButton">
-    <img src="camera-fill-svgrepo-com.svg" alt="相機">
+    <img src="camera-fill-svgrepo-com.svg">
   </label>
-  <input type="file" id="imageInput" accept="image/*" />
+  <input type="file" id="imageInput" accept="image/*">
 
   <button id="sendButton">Send</button>
 </div>
 
 <script>
-/* ------------ Data ------------- */
+/* ---------- Data ---------- */
 const checkpoint0 = {
   id: "checkpoint-0",
   messages: JSON.parse(localStorage.getItem("barrage_checkpoint-0") || "[]"),
   interval: null
 };
 
-/* ------------ DOM ------------- */
 const input = document.getElementById("messageInput");
+let imageInput = document.getElementById("imageInput");
 const sendBtn = document.getElementById("sendButton");
-const imageInput = document.getElementById("imageInput");
 const container = document.getElementById("barrage-container");
 const form = document.getElementById("messageForm");
 
 let active = null;
 
-/* ------------ Barrage ------------- */
+/* ---------- 彈幕 ---------- */
 function showBarrage(msg, index){
   const el = document.createElement("div");
   el.className = "barrage";
@@ -178,25 +177,25 @@ function showBarrage(msg, index){
   }
 
   if(msg.text){
-    const textNode = document.createTextNode(msg.text);
-    el.appendChild(textNode);
+    el.appendChild(document.createTextNode(msg.text));
   }
 
   const likeSpan = document.createElement("span");
   likeSpan.className = "like-count";
-  const heart = document.createElement("img");
-  heart.src = "heart-straight-fill-svgrepo-com.svg";
-  likeSpan.appendChild(heart);
 
-  const num = document.createElement("span");
-  num.textContent = msg.likes || 0;
-  likeSpan.appendChild(num);
+  const heartIcon = document.createElement("img");
+  heartIcon.src = "heart-straight-fill-svgrepo-com.svg";
 
+  const likeNumber = document.createElement("span");
+  likeNumber.textContent = msg.likes || 0;
+
+  likeSpan.appendChild(heartIcon);
+  likeSpan.appendChild(likeNumber);
   el.appendChild(likeSpan);
 
   el.addEventListener("dblclick", ()=>{
     checkpoint0.messages[index].likes = (checkpoint0.messages[index].likes || 0) + 1;
-    num.textContent = checkpoint0.messages[index].likes;
+    likeNumber.textContent = checkpoint0.messages[index].likes;
     localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
   });
 
@@ -204,6 +203,7 @@ function showBarrage(msg, index){
   setTimeout(()=>el.remove(), 9000);
 }
 
+/* ---------- Barrage Loop ---------- */
 function startBarrage(){
   if(checkpoint0.interval) return;
   container.style.display = "block";
@@ -225,19 +225,22 @@ function stopBarrage(){
   container.innerHTML = "";
 }
 
-/* ------------ Marker events ------------- */
-document.getElementById("checkpoint-0").addEventListener("targetFound", ()=>{
+/* ---------- Marker Events ---------- */
+const marker0 = document.getElementById("checkpoint-0");
+
+marker0.addEventListener("targetFound", ()=>{
   active = checkpoint0;
   form.style.display = "flex";
   startBarrage();
 });
-document.getElementById("checkpoint-0").addEventListener("targetLost", ()=>{
+
+marker0.addEventListener("targetLost", ()=>{
   active = null;
   form.style.display = "none";
   stopBarrage();
 });
 
-/* ------------ Send message ------------- */
+/* ---------- Send Message ---------- */
 sendBtn.addEventListener("click", ()=> {
   if(!active) return;
 
@@ -254,12 +257,15 @@ sendBtn.addEventListener("click", ()=> {
       checkpoint0.messages.shift();
 
     localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
-
     showBarrage(msg, checkpoint0.messages.length - 1);
 
+    // 清空文字
     input.value = "";
-    imageInput.value = "";  // ★ 清空 file input
-    file = null;            // ★ 避免二次送出
+
+    /* ⭐⭐⭐ 重點：重新建立 file input（100% 清空上一張圖片） */
+    const newInput = imageInput.cloneNode();
+    imageInput.replaceWith(newInput);
+    imageInput = newInput;
   };
 
   if(file){
