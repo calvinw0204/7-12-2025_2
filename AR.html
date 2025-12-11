@@ -1,41 +1,59 @@
+
 <!DOCTYPE html>
 <html lang="zh-HK">
 <head>
-  <meta charset="UTF-8" />
-  <title>Starlight AR</title>
-
-  <!-- A-Frame & MindAR -->
+  <meta charset="UTF-8">
+  <title>Starlight AR</title> 
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.css" />
 
   <style>
-    body, html { margin:0; padding:0; overflow:hidden; font-family:sans-serif; }
+    body, html { margin:0; padding:0; height:100%; overflow:hidden; font-family:sans-serif; }
 
-    /* 彈幕 */
-    #barrage-container {
-      position:absolute; top:0; left:0; width:100%; height:60%;
-      overflow:hidden; pointer-events:none; display:none;
-      z-index:20;
+    /* 彈幕容器 */
+    #barrage-container { 
+      position:absolute; top:0; left:0; width:100%; height:60%; 
+      pointer-events:none; z-index:15; overflow:hidden; display:none; 
     }
-    .barrage {
-      position:absolute;
-      white-space:nowrap;
-      font-size:20px; color:white;
-      background:rgba(0,0,0,0.55);
-      padding:8px 14px;
+
+    /* 彈幕：灰色橢圓背景＋白字 */
+    .barrage { 
+      position:absolute; white-space:nowrap; 
+      font-size:20px; 
+      color:white;
+      background: rgba(0, 0, 0, 0.55);
       border-radius:999px;
+      padding:8px 14px;
+
       display:flex; align-items:center; gap:12px;
       animation: moveLeft 8s linear forwards;
+
+      cursor:pointer; 
       pointer-events:auto;
-      cursor:pointer;
     }
-    .barrage img {
-      height:80px; border-radius:6px;
+
+    .barrage img { 
+      height:80px; 
+      width:auto; 
+      border-radius:6px; 
     }
-    @keyframes moveLeft {
-      from { left:100%; }
-      to { left:-100%; }
+
+    /* Like 心心 SVG */
+    .like-count {
+      display:flex; align-items:center; gap:4px;
+      font-size:20px; /* 與文字同高度 */
+      color:white;
+    }
+    .like-count img {
+      height:1em; /* 與文字同高 */
+      width:auto;
+      filter: invert(53%) sepia(80%) saturate(5360%) hue-rotate(320deg) brightness(96%) contrast(93%); /* 粉紅色 */
+    }
+
+    @keyframes moveLeft { 
+      from { left:100%; } 
+      to { left:-100%; } 
     }
 
     /* 留言 UI */
@@ -43,230 +61,238 @@
       position:fixed; bottom:10px; left:50%; transform:translateX(-50%);
       background:rgba(255,255,255,0.95);
       padding:8px 12px; border-radius:12px;
-      display:flex; align-items:center; gap:8px;
-      width:90%; max-width:900px;
-      z-index:999; display:none;
+      display:flex; align-items:center; gap:8px; width:90%;
+      max-width:900px; justify-content:space-between;
+      z-index:1000; display:none;
     }
+
+    /* 輸入框樣式 */
     #messageInput {
-      width:250px; height:40px;
+      width:250px;
+      height:40px;
       border-radius:5px;
       border:2px solid #0078ff;
+      background-color:#fff;
       box-shadow: 4px 4px #0078ff;
+      font-size:15px;
+      font-weight:600;
+      color:#000;
       padding:5px 10px;
-      font-size:15px; font-weight:600;
+      outline:none;
     }
-    #cameraButton { width:40px; height:40px; background:#eee; border-radius:50%; display:flex; justify-content:center; align-items:center; cursor:pointer; }
-    #cameraButton img { width:22px; height:22px; }
-    #sendButton {
-      background:#fbca1f;
-      padding:0.6em 1.3em;
-      font-size:18px; font-weight:900;
-      border:3px solid black; border-radius:0.4em;
+
+    #messageInput::placeholder { color:#666; opacity:0.8; }
+    #messageInput:focus { border:2px solid #ffca1f; }
+
+    /* 相機按鈕 */
+    #cameraButton {
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      border:none;
+      background:#f0f0f0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
       cursor:pointer;
+      padding:0;
+    }
+    #cameraButton img { width:22px; height:22px; }
+
+    /* send button */
+    #sendButton {
+      background: #fbca1f;
+      font-family: inherit;
+      padding: 0.6em 1.3em;
+      font-weight: 900;
+      font-size: 18px;
+      border: 3px solid black;
+      border-radius: 0.4em;
+      box-shadow: 0.1em 0.1em;
+      cursor: pointer;
+    }
+    #sendButton:hover {
+      transform: translate(-0.05em, -0.05em);
+      box-shadow: 0.15em 0.15em;
+    }
+    #sendButton:active {
+      transform: translate(0.05em, 0.05em);
+      box-shadow: 0.05em 0.05em;
     }
 
     #imageInput { display:none; }
-    #imagePreview { height:90px; display:none; border-radius:6px; }
+    #imagePreview { height:90px; width:auto; border-radius:4px; display:none; }
   </style>
 </head>
 
 <body>
 
 <a-scene mindar-image="imageTargetSrc: travel-target.mind; autoStart: true"
-         vr-mode-ui="enabled:false"
-         device-orientation-permission-ui="enabled:true"
+         vr-mode-ui="enabled: false"
+         device-orientation-permission-ui="enabled: true"
          embedded>
-  <a-camera look-controls="enabled:false" cursor="rayOrigin:mouse"></a-camera>
-  <a-entity mindar-image-target="targetIndex:0" id="checkpoint"></a-entity>
+  <a-camera position="0 0 0" look-controls="enabled:false" cursor="rayOrigin: mouse"></a-camera>
+  <a-assets></a-assets>
+
+  <!-- Marker -->
+  <a-entity mindar-image-target="targetIndex:0" id="checkpoint-0"></a-entity>
 </a-scene>
 
+<!-- 彈幕 -->
 <div id="barrage-container"></div>
 
-<!-- 留言輸入欄 -->
+<!-- 留言 -->
 <div id="messageForm">
-  <input id="messageInput" placeholder="Write a message..." />
+  <input type="text" id="messageInput" placeholder="Share your journey..." />
+  
+  <!-- 相機按鈕 -->
   <label for="imageInput" id="cameraButton">
-    <img src="camera-fill-svgrepo-com.svg">
+    <img src="camera-fill-svgrepo-com.svg" alt="相機">
   </label>
-  <input id="imageInput" type="file" accept="image/*">
-  <img id="imagePreview">
+  <input type="file" id="imageInput" accept="image/*" />
+
+  <img id="imagePreview" />
   <button id="sendButton">Send</button>
 </div>
-<!-- Supabase JS -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
 <script>
-/* ===========================
-   Supabase Config
-=========================== */
-const SUPABASE_URL = "https://bshseelavtsyhmryvrfm.supabase.co";
-const SUPABASE_KEY = "YOUR-ANON-KEY-HERE"; // ← 換返你個（不要公開）
-const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const checkpoint0 = {
+  id: "checkpoint-0",
+  messages: JSON.parse(localStorage.getItem("barrage_checkpoint-0") || "[]"),
+  interval: null
+};
 
-/* ===========================
-   DOM Reference
-=========================== */
-const form = document.getElementById("messageForm");
-const msgInput = document.getElementById("messageInput");
-const imgInput = document.getElementById("imageInput");
-const preview = document.getElementById("imagePreview");
-const barrageBox = document.getElementById("barrage-container");
+const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendButton");
+const imageInput = document.getElementById("imageInput");
+const preview = document.getElementById("imagePreview");
+const container = document.getElementById("barrage-container");
+const form = document.getElementById("messageForm");
 
-let messages = [];
-let barrageTimer = null;
+let active = null;
 
-/* ===========================
-   彈幕顯示
-=========================== */
-function showBarrage(m){
+/* ---------------- 彈幕顯示 ---------------- */
+function showBarrage(msg, index){
   const el = document.createElement("div");
   el.className = "barrage";
-  el.style.top = Math.random()*50 + "%";
-  el.dataset.id = m.id;
+  el.style.top = Math.random() * (container.offsetHeight - 120) + "px";
 
-  if(m.photo_url){
+  if(msg.img){
     const img = document.createElement("img");
-    img.src = m.photo_url;
+    img.src = msg.img;
     el.appendChild(img);
   }
 
-  if(m.message){
-    el.append(document.createTextNode(m.message));
+  if(msg.text){
+    const textNode = document.createTextNode(msg.text);
+    el.appendChild(textNode);
   }
 
-  // like
-  const like = document.createElement("span");
-  like.style.marginLeft = "10px";
-  like.innerHTML = `❤️ ${m.likes ?? 0}`;
-  el.appendChild(like);
+  // 心心 SVG
+  const likeSpan = document.createElement("span");
+  likeSpan.className = "like-count";
+  const heartIcon = document.createElement("img");
+  heartIcon.src = "heart-straight-fill-svgrepo-com.svg";
+  likeSpan.appendChild(heartIcon);
 
-  // dblclick like
-  el.addEventListener("dblclick", async ()=>{
-    let newLikes = (m.likes ?? 0) + 1;
-    like.innerHTML = `❤️ ${newLikes}`;
-    m.likes = newLikes;
+  const likeNumber = document.createElement("span");
+  likeNumber.textContent = msg.likes || 0;
+  likeSpan.appendChild(likeNumber);
 
-    await supabaseClient.from("comments").update({ likes:newLikes }).eq("id", m.id);
+  el.appendChild(likeSpan);
+
+  // Double Click = +1 like
+  el.addEventListener("dblclick", ()=>{
+    checkpoint0.messages[index].likes = (checkpoint0.messages[index].likes || 0) + 1;
+    likeNumber.textContent = checkpoint0.messages[index].likes;
+    localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
   });
 
-  barrageBox.appendChild(el);
+  container.appendChild(el);
   setTimeout(()=>el.remove(), 9000);
 }
 
-/* ===========================
-   Interval 播放
-=========================== */
+/* ---------------- Start Barrage ---------------- */
 function startBarrage(){
-  if(barrageTimer) return;
-  barrageBox.style.display = "block";
-
+  if(checkpoint0.interval) return;
+  container.style.display = "block";
   let i = 0;
-  barrageTimer = setInterval(()=>{
-    if(messages.length > 0){
-      showBarrage(messages[i]);
-      i = (i+1) % messages.length;
+  checkpoint0.interval = setInterval(()=>{
+    if(checkpoint0.messages.length > 0){
+      showBarrage(checkpoint0.messages[i], i);
+      i = (i + 1) % checkpoint0.messages.length;
     }
   }, 2500);
 }
+
 function stopBarrage(){
-  clearInterval(barrageTimer);
-  barrageTimer = null;
-  barrageBox.innerHTML = "";
-  barrageBox.style.display = "none";
+  if(checkpoint0.interval){
+    clearInterval(checkpoint0.interval);
+    checkpoint0.interval = null;
+  }
+  container.style.display = "none";
+  container.innerHTML = "";
 }
 
-/* ===========================
-   Load Comments
-=========================== */
-async function loadMessages(){
-  const { data } = await supabaseClient
-    .from("comments")
-    .select("*")
-    .order("created_at");
-  messages = data || [];
-}
+/* ---------------- Marker Event ---------------- */
+const marker0 = document.getElementById("checkpoint-0");
+marker0.addEventListener("targetFound", ()=>{
+  active = checkpoint0;
+  form.style.display = "flex";
+  startBarrage();
+});
+marker0.addEventListener("targetLost", ()=>{
+  active = null;
+  form.style.display = "none";
+  stopBarrage();
+});
 
-/* ===========================
-   Realtime Subscription
-=========================== */
-supabaseClient
-  .channel("comments-realtime")
-  .on("postgres_changes", { event:"*", schema:"public", table:"comments" }, payload=>{
-      loadMessages();
-  })
-  .subscribe();
-
-/* ===========================
-   Photo Preview
-=========================== */
-imgInput.addEventListener("change", ()=>{
-  const f = imgInput.files[0];
-  if(!f){
-    preview.style.display="none";
-    return;
+/* ---------------- Image Preview ---------------- */
+imageInput.addEventListener("change", ()=>{
+  const file = imageInput.files[0];
+  if(!file){ 
+    preview.style.display="none"; 
+    preview.src=""; 
+    preview.removeAttribute("src");
+    return; 
   }
   const reader = new FileReader();
   reader.onload = e=>{
     preview.src = e.target.result;
     preview.style.display = "inline";
   };
-  reader.readAsDataURL(f);
+  reader.readAsDataURL(file);
 });
 
-/* ===========================
-   Upload Image to Supabase
-=========================== */
-async function uploadImage(){
-  const file = imgInput.files[0];
-  if(!file) return null;
+/* ---------------- Send Message ---------------- */
+sendBtn.addEventListener("click", ()=>{
+  if(!active) return;
+  const text = input.value.trim();
+  const file = imageInput.files[0];
+  if(!text && !file) return;
 
-  const fileName = `${Date.now()}-${file.name}`;
-  const { data, error } = await supabaseClient.storage
-      .from("photos")
-      .upload(fileName, file);
+  const saveMsg = (imgData = null)=>{
+    const msg = { text, img: imgData, likes: 0 };
+    checkpoint0.messages.push(msg);
+    if(checkpoint0.messages.length > 80) checkpoint0.messages.shift();
+    localStorage.setItem("barrage_checkpoint-0", JSON.stringify(checkpoint0.messages));
+    showBarrage(msg, checkpoint0.messages.length - 1);
 
-  if(error) { console.error(error); return null; }
+    input.value = "";
+    imageInput.value = "";
+    preview.src = "";
+    preview.removeAttribute("src");
+    preview.style.display = "none";
+  };
 
-  const { data:publicURL } = supabaseClient.storage
-      .from("photos")
-      .getPublicUrl(fileName);
-
-  return publicURL.publicUrl;
-}
-
-/* ===========================
-   Send Message
-=========================== */
-sendBtn.addEventListener("click", async ()=>{
-  const msg = msgInput.value.trim();
-  if(!msg && !imgInput.files.length) return;
-
-  let photoURL = await uploadImage();
-
-  await supabaseClient.from("comments").insert({
-    message: msg,
-    photo_url: photoURL
-  });
-
-  msgInput.value = "";
-  imgInput.value = "";
-  preview.style.display = "none";
+  if(file){
+    const reader = new FileReader();
+    reader.onload = e=> saveMsg(e.target.result);
+    reader.readAsDataURL(file);
+  } else saveMsg();
 });
 
-/* ===========================
-   Marker Events
-=========================== */
-document.getElementById("checkpoint").addEventListener("targetFound", async ()=>{
-  form.style.display = "flex";
-  await loadMessages();
-  startBarrage();
-});
-
-document.getElementById("checkpoint").addEventListener("targetLost", ()=>{
-  form.style.display = "none";
-  stopBarrage();
-});
+input.addEventListener("keydown", e=>{ if(e.key==="Enter") sendBtn.click(); });
 </script>
 
 </body>
