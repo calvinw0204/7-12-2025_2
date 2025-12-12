@@ -186,7 +186,7 @@ function tryShowRewardBarrage(){
   const now = Date.now();
 
   if(now - lastRewardTime < 20000) return;   // 20 秒冷卻
-  if(Math.random() < 0.10){                  // 10% 機率
+  if(Math.random() < 0.50){                  // 10% 機率
     createRewardBarrage();
     lastRewardTime = now;
   }
@@ -271,3 +271,4 @@ input.addEventListener("keydown", e=>{
 
 </body>
 </html>
+
